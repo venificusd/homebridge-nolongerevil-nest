@@ -36,6 +36,8 @@ export interface ThermostatState {
   targetTemperatureHigh: number;
   hvacMode: 'off' | 'heat' | 'cool' | 'heat-cool';
   hvacState: 'off' | 'heating' | 'cooling';
+  fanMode: 'on' | 'auto' | 'off';
+  fanState: boolean;
   humidity: number;
   awayMode: boolean;
   canHeat: boolean;
@@ -74,11 +76,13 @@ export interface ThermostatApiClient {
   setTemperatureRange(deviceId: string, lowTemperature: number, highTemperature: number): Promise<void>;
   setMode(deviceId: string, mode: 'off' | 'heat' | 'cool' | 'heat-cool'): Promise<void>;
   setAwayMode(deviceId: string, away: boolean): Promise<void>;
+  setFan(deviceId: string, mode: 'on' | 'auto' | 'off'): Promise<void>;
   getSchedule(deviceId: string): Promise<ThermostatSchedule | null>;
   setSchedule(deviceId: string, schedule: ThermostatSchedule): Promise<void>;
   clearSchedule(deviceId: string): Promise<void>;
   setLearningMode(deviceId: string, enabled: boolean): Promise<void>;
   readonly supportsLearningMode: boolean;
+  readonly supportsFanControl: boolean;
   readonly sourceLabel: string;
 }
 
@@ -141,6 +145,10 @@ export class NoLongerEvilAPI implements ThermostatApiClient {
 
   get supportsLearningMode(): boolean {
     return false;
+  }
+
+  get supportsFanControl(): boolean {
+    return true;
   }
 
   private async request<T>(
@@ -273,6 +281,10 @@ export class NoLongerEvilAPI implements ThermostatApiClient {
     });
   }
 
+  async setFan(deviceId: string, mode: 'on' | 'auto' | 'off'): Promise<void> {
+    await this.request('POST', `/thermostat/${deviceId}/fan`, { mode });
+  }
+
   async getSchedule(deviceId: string): Promise<ThermostatSchedule | null> {
     try {
       const response = await this.request<ScheduleResponse>('GET', `/thermostat/${deviceId}/schedule`);
@@ -341,6 +353,10 @@ export class NoLongerEvilAPI implements ThermostatApiClient {
       hvacState = 'cooling';
     }
 
+    const rawFanMode = shared['fan_mode'];
+    const fanMode = rawFanMode === 'on' || rawFanMode === 'off' ? rawFanMode : 'auto';
+    const fanState = shared['hvac_fan_state'] === true;
+
     // Away mode (0 = home, 2 = away)
     const awayValue = shared['auto_away'] as number;
     const awayMode = awayValue === 2;
@@ -364,6 +380,8 @@ export class NoLongerEvilAPI implements ThermostatApiClient {
       targetTemperatureHigh: targetTempHigh,
       hvacMode,
       hvacState,
+      fanMode,
+      fanState,
       humidity,
       awayMode,
       canHeat,

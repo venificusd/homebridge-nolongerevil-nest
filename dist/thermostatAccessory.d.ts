@@ -5,6 +5,7 @@ export declare class NestThermostatAccessory {
     private readonly platform;
     private readonly accessory;
     private readonly thermostatService;
+    private fanService?;
     private readonly humidityService;
     private scheduleSwitch?;
     private state;
@@ -20,6 +21,7 @@ export declare class NestThermostatAccessory {
     stopPolling(): void;
     refreshState(): Promise<void>;
     private updateCharacteristics;
+    private updateFanCharacteristics;
     private mapHvacStateToHomeKit;
     private mapHvacModeToHomeKit;
     private mapHomeKitToHvacMode;
@@ -34,4 +36,10 @@ export declare class NestThermostatAccessory {
     getHeatingThresholdTemperature(): CharacteristicValue;
     setHeatingThresholdTemperature(value: CharacteristicValue): Promise<void>;
     getCurrentHumidity(): CharacteristicValue;
+    getFanActive(): CharacteristicValue;
+    setFanActive(value: CharacteristicValue): Promise<void>;
+    getCurrentFanState(): CharacteristicValue;
+    getTargetFanState(): CharacteristicValue;
+    setTargetFanState(value: CharacteristicValue): Promise<void>;
+    private setFanMode;
 }

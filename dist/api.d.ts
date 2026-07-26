@@ -29,6 +29,8 @@ export interface ThermostatState {
     targetTemperatureHigh: number;
     hvacMode: 'off' | 'heat' | 'cool' | 'heat-cool';
     hvacState: 'off' | 'heating' | 'cooling';
+    fanMode: 'on' | 'auto' | 'off';
+    fanState: boolean;
     humidity: number;
     awayMode: boolean;
     canHeat: boolean;
@@ -62,11 +64,13 @@ export interface ThermostatApiClient {
     setTemperatureRange(deviceId: string, lowTemperature: number, highTemperature: number): Promise<void>;
     setMode(deviceId: string, mode: 'off' | 'heat' | 'cool' | 'heat-cool'): Promise<void>;
     setAwayMode(deviceId: string, away: boolean): Promise<void>;
+    setFan(deviceId: string, mode: 'on' | 'auto' | 'off'): Promise<void>;
     getSchedule(deviceId: string): Promise<ThermostatSchedule | null>;
     setSchedule(deviceId: string, schedule: ThermostatSchedule): Promise<void>;
     clearSchedule(deviceId: string): Promise<void>;
     setLearningMode(deviceId: string, enabled: boolean): Promise<void>;
     readonly supportsLearningMode: boolean;
+    readonly supportsFanControl: boolean;
     readonly sourceLabel: string;
 }
 export declare const RETRYABLE_STATUS: Set<number>;
@@ -90,6 +94,7 @@ export declare class NoLongerEvilAPI implements ThermostatApiClient {
     constructor(apiKey: string, log: Logger, serverUrl?: string);
     get sourceLabel(): string;
     get supportsLearningMode(): boolean;
+    get supportsFanControl(): boolean;
     private request;
     private requestOnce;
     getDevices(): Promise<ApiDevice[]>;
@@ -98,6 +103,7 @@ export declare class NoLongerEvilAPI implements ThermostatApiClient {
     setTemperatureRange(deviceId: string, lowTemperature: number, highTemperature: number): Promise<void>;
     setMode(deviceId: string, mode: 'off' | 'heat' | 'cool' | 'heat-cool'): Promise<void>;
     setAwayMode(deviceId: string, away: boolean): Promise<void>;
+    setFan(deviceId: string, mode: 'on' | 'auto' | 'off'): Promise<void>;
     getSchedule(deviceId: string): Promise<ThermostatSchedule | null>;
     setSchedule(deviceId: string, schedule: ThermostatSchedule): Promise<void>;
     clearSchedule(deviceId: string): Promise<void>;

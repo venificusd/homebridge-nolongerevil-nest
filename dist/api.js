@@ -88,6 +88,9 @@ class NoLongerEvilAPI {
     get supportsLearningMode() {
         return false;
     }
+    get supportsFanControl() {
+        return true;
+    }
     async request(method, path, body) {
         for (let attempt = 0;; attempt++) {
             try {
@@ -189,6 +192,9 @@ class NoLongerEvilAPI {
             away,
         });
     }
+    async setFan(deviceId, mode) {
+        await this.request('POST', `/thermostat/${deviceId}/fan`, { mode });
+    }
     async getSchedule(deviceId) {
         try {
             const response = await this.request('GET', `/thermostat/${deviceId}/schedule`);
@@ -250,6 +256,9 @@ class NoLongerEvilAPI {
         else if (shared['hvac_ac_state'] === true) {
             hvacState = 'cooling';
         }
+        const rawFanMode = shared['fan_mode'];
+        const fanMode = rawFanMode === 'on' || rawFanMode === 'off' ? rawFanMode : 'auto';
+        const fanState = shared['hvac_fan_state'] === true;
         // Away mode (0 = home, 2 = away)
         const awayValue = shared['auto_away'];
         const awayMode = awayValue === 2;
@@ -269,6 +278,8 @@ class NoLongerEvilAPI {
             targetTemperatureHigh: targetTempHigh,
             hvacMode,
             hvacState,
+            fanMode,
+            fanState,
             humidity,
             awayMode,
             canHeat,

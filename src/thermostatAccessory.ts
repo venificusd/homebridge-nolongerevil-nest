@@ -8,6 +8,7 @@ import { ThermostatApiClient, ThermostatState } from './api';
 
 export class NestThermostatAccessory {
   private readonly thermostatService: Service;
+  private fanService?: Service;
   private readonly humidityService: Service;
   private scheduleSwitch?: Service;
 
@@ -41,6 +42,28 @@ export class NestThermostatAccessory {
       this.platform.Characteristic.Name,
       this.state.name,
     );
+
+    // Fan control is only supported by the hosted API.
+    if (this.apiClient.supportsFanControl) {
+      this.fanService = this.accessory.getService(this.platform.Service.Fanv2)
+        || this.accessory.addService(this.platform.Service.Fanv2);
+
+      this.fanService.setCharacteristic(
+        this.platform.Characteristic.Name,
+        `${this.state.name} Fan`,
+      );
+
+      this.fanService.getCharacteristic(this.platform.Characteristic.Active)
+        .onGet(this.getFanActive.bind(this))
+        .onSet(this.setFanActive.bind(this));
+
+      this.fanService.getCharacteristic(this.platform.Characteristic.CurrentFanState)
+        .onGet(this.getCurrentFanState.bind(this));
+
+      this.fanService.getCharacteristic(this.platform.Characteristic.TargetFanState)
+        .onGet(this.getTargetFanState.bind(this))
+        .onSet(this.setTargetFanState.bind(this));
+    }
 
     // Current Heating/Cooling State
     this.thermostatService.getCharacteristic(this.platform.Characteristic.CurrentHeatingCoolingState)
@@ -228,6 +251,27 @@ export class NestThermostatAccessory {
       this.platform.Characteristic.CurrentRelativeHumidity,
       this.state.humidity,
     );
+
+    this.updateFanCharacteristics();
+  }
+
+  private updateFanCharacteristics(): void {
+    if (!this.fanService) {
+      return;
+    }
+
+    this.fanService.updateCharacteristic(
+      this.platform.Characteristic.Active,
+      this.getFanActive(),
+    );
+    this.fanService.updateCharacteristic(
+      this.platform.Characteristic.CurrentFanState,
+      this.getCurrentFanState(),
+    );
+    this.fanService.updateCharacteristic(
+      this.platform.Characteristic.TargetFanState,
+      this.getTargetFanState(),
+    );
   }
 
   private mapHvacStateToHomeKit(state: ThermostatState['hvacState']): CharacteristicValue {
@@ -385,5 +429,48 @@ export class NestThermostatAccessory {
 
   getCurrentHumidity(): CharacteristicValue {
     return this.state.humidity;
+  }
+
+  getFanActive(): CharacteristicValue {
+    return this.state.fanMode === 'off'
+      ? this.platform.Characteristic.Active.INACTIVE
+      : this.platform.Characteristic.Active.ACTIVE;
+  }
+
+  async setFanActive(value: CharacteristicValue): Promise<void> {
+    const mode = value === this.platform.Characteristic.Active.ACTIVE ? 'on' : 'off';
+    await this.setFanMode(mode);
+  }
+
+  getCurrentFanState(): CharacteristicValue {
+    return this.state.fanState
+      ? this.platform.Characteristic.CurrentFanState.BLOWING_AIR
+      : this.platform.Characteristic.CurrentFanState.IDLE;
+  }
+
+  getTargetFanState(): CharacteristicValue {
+    return this.state.fanMode === 'on'
+      ? this.platform.Characteristic.TargetFanState.MANUAL
+      : this.platform.Characteristic.TargetFanState.AUTO;
+  }
+
+  async setTargetFanState(value: CharacteristicValue): Promise<void> {
+    const mode = value === this.platform.Characteristic.TargetFanState.MANUAL ? 'on' : 'auto';
+    await this.setFanMode(mode);
+  }
+
+  private async setFanMode(mode: 'on' | 'auto' | 'off'): Promise<void> {
+    this.platform.log.info(`Setting ${this.state.name} fan mode to ${mode}`);
+
+    try {
+      await this.apiClient.setFan(this.state.deviceId, mode);
+      this.state.fanMode = mode;
+      this.updateFanCharacteristics();
+    } catch (error) {
+      this.platform.log.error('Failed to set fan mode:', error);
+      throw new this.platform.api.hap.HapStatusError(
+        this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE,
+      );
+    }
   }
 }

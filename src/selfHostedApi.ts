@@ -69,6 +69,10 @@ export class SelfHostedAPI implements ThermostatApiClient {
     return true;
   }
 
+  get supportsFanControl(): boolean {
+    return false;
+  }
+
   private async request<T>(
     method: string,
     path: string,
@@ -251,6 +255,8 @@ export class SelfHostedAPI implements ThermostatApiClient {
       targetTemperatureHigh: targetTempHigh,
       hvacMode,
       hvacState,
+      fanMode: 'auto',
+      fanState: false,
       humidity,
       awayMode,
       canHeat,
@@ -292,6 +298,10 @@ export class SelfHostedAPI implements ThermostatApiClient {
       command: 'set_away',
       value: away,
     });
+  }
+
+  async setFan(_deviceId: string, _mode: 'on' | 'auto' | 'off'): Promise<void> {
+    throw new Error('Fan control is not available on the self-hosted API');
   }
 
   async getSchedule(deviceId: string): Promise<ThermostatSchedule | null> {

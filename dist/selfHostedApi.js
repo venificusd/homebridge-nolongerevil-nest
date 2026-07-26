@@ -57,6 +57,9 @@ class SelfHostedAPI {
     get supportsLearningMode() {
         return true;
     }
+    get supportsFanControl() {
+        return false;
+    }
     async request(method, path, body) {
         for (let attempt = 0;; attempt++) {
             try {
@@ -216,6 +219,8 @@ class SelfHostedAPI {
             targetTemperatureHigh: targetTempHigh,
             hvacMode,
             hvacState,
+            fanMode: 'auto',
+            fanState: false,
             humidity,
             awayMode,
             canHeat,
@@ -253,6 +258,9 @@ class SelfHostedAPI {
             command: 'set_away',
             value: away,
         });
+    }
+    async setFan(_deviceId, _mode) {
+        throw new Error('Fan control is not available on the self-hosted API');
     }
     async getSchedule(deviceId) {
         try {
